@@ -119,7 +119,8 @@ static int pcmsim_do_bvec(struct pcmsim_device *pcmsim, struct page *page,
 	void *mem;
 	int err = 0;
 
-	mem = kmap_atomic(page, KM_USER0);
+	//mem = kmap_atomic(page, KM_USER0);
+	mem = kmap_atomic(page);
 	if (rw == READ) {
 		copy_from_pcmsim(mem + off, pcmsim, sector, len);
 		flush_dcache_page(page);
@@ -128,7 +129,8 @@ static int pcmsim_do_bvec(struct pcmsim_device *pcmsim, struct page *page,
 		flush_dcache_page(page);
 		copy_to_pcmsim(pcmsim, mem + off, sector, len);
 	}
-	kunmap_atomic(mem, KM_USER0);
+	//kunmap_atomic(mem, KM_USER0);
+	kunmap_atomic(mem);	
 
 	return err;
 }
@@ -137,7 +139,8 @@ static int pcmsim_do_bvec(struct pcmsim_device *pcmsim, struct page *page,
 /**
  * Process pending requests from the queue
  */
-static int pcmsim_make_request(struct request_queue *q, struct bio *bio)
+//static int pcmsim_make_request(struct request_queue *q, struct bio *bio)
+static void pcmsim_make_request(struct request_queue *q, struct bio *bio)
 {
 	struct block_device *bdev = bio->bi_bdev;
 	struct pcmsim_device *pcmsim = bdev->bd_disk->private_data;
@@ -177,18 +180,20 @@ static int pcmsim_make_request(struct request_queue *q, struct bio *bio)
 out:
 	bio_endio(bio, err);
 
-	return 0;
+	//return 0;
 }
 
 
 /**
  * Perform I/O control
  */
+/*
 static int pcmsim_ioctl(struct block_device *bdev, fmode_t mode,
 					    unsigned int cmd, unsigned long arg)
 {
 	return -ENOTTY;
 }
+*/
 
 
 /**
@@ -196,7 +201,7 @@ static int pcmsim_ioctl(struct block_device *bdev, fmode_t mode,
  */
 static struct block_device_operations pcmsim_fops = {
 	.owner        = THIS_MODULE,
-	.locked_ioctl = pcmsim_ioctl,
+	//.locked_ioctl = pcmsim_ioctl,
 };
 
 
@@ -235,7 +240,8 @@ struct pcmsim_device* pcmsim_alloc(int index, unsigned capacity_mb)
 	pcmsim->pcmsim_queue = blk_alloc_queue(GFP_KERNEL);
 	if (!pcmsim->pcmsim_queue) goto out_free_dev;
 	blk_queue_make_request(pcmsim->pcmsim_queue, pcmsim_make_request);
-	blk_queue_ordered     (pcmsim->pcmsim_queue, QUEUE_ORDERED_TAG, NULL);
+	//blk_queue_ordered     (pcmsim->pcmsim_queue, QUEUE_ORDERED_TAG, NULL);
+	blk_queue_flush(pcmsim->pcmsim_queue, REQ_FLUSH);
 	/*blk_queue_max_sectors (pcmsim->pcmsim_queue, 1024);*/
 	blk_queue_bounce_limit(pcmsim->pcmsim_queue, BLK_BOUNCE_ANY);
 
